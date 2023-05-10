@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const nodeMailer = require('nodemailer');
 const sendGridTransport = require('nodemailer-sendgrid-transport');
 const crypto = require('crypto');
+const { validationResult } = require('express-validator');
 
 const transporter = nodeMailer.createTransport(
   sendGridTransport({
@@ -26,8 +27,11 @@ exports.getLogin = (req, res, next) => {
   res.render('auth/login', {
     path: '/login',
     pageTitle: 'Login',
-    isAuthenticated: false,
-    errorMessage: message
+    errorMessage: message,
+    oldInput: {
+      email: '',
+      password: ''
+    }
   });
 };
 
@@ -35,6 +39,18 @@ exports.postLogin = (req, res, next) => {
   const email = req.body.email;
   const password = req.body.password;
 
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).render('auth/login', {
+      path: '/login',
+      pageTitle: 'Login',
+      errorMessage: errors.array()[0].msg,
+      oldInput: {
+        email: email,
+        password: password
+      }
+    });
+  }
   User.findOne({ email: email })
     .then(user => {
       if (!user) {
@@ -75,15 +91,33 @@ exports.getSignup = (req, res, next) => {
     path: '/signup',
     pageTitle: 'Signup',
     isAuthenticated: false,
-    errorMessage: message
+    errorMessage: message,
+    oldInput: {
+      email:'',
+      password:'',
+      confirmPassword: ''
+    }
   });
 };
 
 exports.postSignup = (req, res, next) => {
   const email = req.body.email;
   const password = req.body.password;
-  const confirmPassword = req.body.confirmPassword;
+  const errors = validationResult(req);
 
+  if (!errors.isEmpty()) {
+    console.log(errors.array());
+    return res.status(422).render('auth/signup', {
+      path: '/signup',
+      pageTitle: 'Signup',
+      errorMessage: errors.array()[0].msg,
+      oldInput: {
+        email:email,
+        password:password,
+        confirmPassword: req.body.confirmPassword
+      }
+    });
+  }
   User.findOne({ email: email })
     .then(userDoc => {
       if (userDoc) {
