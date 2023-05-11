@@ -12,6 +12,7 @@ const app = express();
 
 const csrf = require('csurf');
 const flash = require('connect-flash');
+const multer = require('multer');
 
 var store = new MongoDBStore({
   uri: 'mongodb://localhost:27017/user',
@@ -32,7 +33,34 @@ const shopRoutes = require('./routes/shop');
 const authRoutes = require('./routes/auth');
 
 app.use(bodyParser.urlencoded({ extended: false }));
+
+// file storage
+const fileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'images');
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.filename + '-' + file.originalname);
+  }
+});
+
+// file filter
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype === 'image/png' || file.mimetype === 'image/jpg' || file.mimetype === 'image/jpeg') {
+    cb(null, true);
+  } else {
+    cb(null, false);
+  }
+}
+
+// for file upload
+app.use(multer({storage:fileStorage, fileFilter:fileFilter}).single('image'));
+
 app.use(express.static(path.join(__dirname, 'public')));
+
+// static serving file image
+app.use('/images',express.static(path.join(__dirname, 'images')));
+
 app.use(
   session({
     secret: 'my secret',
